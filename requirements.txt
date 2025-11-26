@@ -8,3 +8,5 @@ scikit-learn
 joblib
 pydantic
 flask
+fpdf
+pillow
