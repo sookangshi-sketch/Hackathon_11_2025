@@ -327,7 +327,7 @@ if st.session_state.active_index != -1:
             st.markdown(html_code, unsafe_allow_html=True)
 
         st.write("")
-        
+
         tab1, tab2 = st.tabs(["Analysis", "Data"])
         with tab1:
             st.caption("AI Summary")
@@ -351,4 +351,5 @@ if st.session_state.active_index != -1:
             st.altair_chart(chart, use_container_width=True)
 else:
     with right_col:
+        st.markdown("### ")
         st.info("👈 Enter applicant details to start.")
