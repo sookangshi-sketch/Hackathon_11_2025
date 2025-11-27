@@ -295,7 +295,7 @@ left_col, right_col = st.columns([1, 1.2], gap="large")
 
 # --- LEFT COLUMN ---
 with left_col:
-    st.markdown("### 🏦 Based On Function")
+    st.markdown("### 🏦 DeepCheck Credit Assessment")
     st.caption("by Cloudflare-Is-Not-Available AI")
     c1, c2, c3, c4 = st.columns(4)
     with c1: income = st.number_input("Income", 0, key="income", help="Monthly income in USD")
