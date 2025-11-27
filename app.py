@@ -93,6 +93,25 @@ def create_summary_image(data, result, label):
 # ---------------------------------------------------------
 # HELPER 2: PDF GENERATOR 
 # ---------------------------------------------------------
+
+def clean_text(text):
+    """Sanitize text to remove unsupported characters for PDF."""
+    if not isinstance(text, str):
+        return str(text)
+    # Replace smart quotes and dashes with standard ASCII
+    replacements = {
+        '\u2018': "'", '\u2019': "'", # Smart single quotes
+        '\u201c': '"', '\u201d': '"', # Smart double quotes
+        '\u2013': '-', '\u2014': '-', # Dashes
+        '\u2026': '...',              # Ellipsis
+        '–': '-'
+    }
+    for k, v in replacements.items():
+        text = text.replace(k, v)
+    
+    # Force Latin-1 compatible, replacing unknowns with '?'
+    return text.encode('latin-1', 'replace').decode('latin-1')
+
 def create_pdf_report(data, result, label, fin_text):
     pdf = FPDF()
     pdf.add_page()
@@ -119,11 +138,15 @@ def create_pdf_report(data, result, label, fin_text):
     
     for key, value in data.items():
         label_text = labels.get(key, key.title())
+        
+        # --- FIX APPLIED HERE: Clean the value before printing ---
+        safe_value = clean_text(value) 
+        
         pdf.cell(60, 7, f"{label_text}", border=0)
         if key == "user_story":
-            pdf.multi_cell(0, 7, f": {value}", border=0)
+            pdf.multi_cell(0, 7, f": {safe_value}", border=0)
         else:
-            pdf.cell(0, 7, f": {value}", border=0, ln=True)
+            pdf.cell(0, 7, f": {safe_value}", border=0, ln=True)
     pdf.ln(10)
 
     # 2. DETAILED ANALYSIS
@@ -135,7 +158,9 @@ def create_pdf_report(data, result, label, fin_text):
     pdf.set_font("Arial", 'B', 12)
     pdf.cell(0, 8, f"A. Financial Metrics (Math Model: {result['Math_Score']}/100)", ln=True)
     pdf.set_font("Arial", '', 10)
-    pdf.multi_cell(0, 6, fin_text)
+    
+    # --- FIX APPLIED HERE: Clean fin_text ---
+    pdf.multi_cell(0, 6, clean_text(fin_text))
     pdf.ln(5)
 
     # B. Behavioral
@@ -144,8 +169,11 @@ def create_pdf_report(data, result, label, fin_text):
     pdf.set_font("Arial", '', 10)
     
     explanation = result.get('Text_Analysis', {}).get('explanation', 'N/A')
-    safe_explanation = explanation.encode('latin-1', 'replace').decode('latin-1')
-    pdf.multi_cell(0, 6, safe_explanation)
+    
+    # --- FIX APPLIED HERE: Use clean_text instead of manual replace ---
+    # Your previous code was: safe_explanation = explanation.encode('latin-1', 'replace').decode('latin-1')
+    # clean_text does that PLUS the smart quote fix.
+    pdf.multi_cell(0, 6, clean_text(explanation))
     pdf.ln(5)
     
     # Flags Table
