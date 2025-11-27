@@ -14,7 +14,7 @@ load_dotenv()
 
 st.set_page_config(page_title="Cloudflare-Is-Not-Available AI", layout="wide")
 
-# --- CSS: GEMINI FLEXBOX LAYOUT ---
+# --- CSS ---
 st.markdown("""
 <style>
     /* 1. MAIN PAGE PADDING */
@@ -91,7 +91,7 @@ def create_summary_image(data, result, label):
     buf=io.BytesIO(); img.save(buf,format='PNG'); return buf.getvalue()
 
 # ---------------------------------------------------------
-# HELPER 2: PDF GENERATOR (ALIGNED COLONS)
+# HELPER 2: PDF GENERATOR 
 # ---------------------------------------------------------
 def create_pdf_report(data, result, label, fin_text):
     pdf = FPDF()
@@ -249,7 +249,8 @@ with st.sidebar:
             """)
         
         if st.session_state.active_index != -1:
-            st.divider()
+            
+            st.caption("Current")
             current_idx = st.session_state.active_index
             current_name = st.session_state.history[current_idx].get('custom_name', f"Case #{current_idx + 1}")
             new_name = st.text_input("Rename Case", value=current_name, label_visibility="collapsed")
@@ -260,13 +261,14 @@ with st.sidebar:
 # ---------------------------------------------------------
 # MAIN LAYOUT
 # ---------------------------------------------------------
-st.markdown("### 🏦 Cloudflare-Is-Not-Available AI")
+
 
 left_col, right_col = st.columns([1, 1.2], gap="large") 
 
 # --- LEFT COLUMN ---
 with left_col:
-    st.caption("Applicant Details")
+    st.markdown("### 🏦 Based On Function")
+    st.caption("by Cloudflare-Is-Not-Available AI")
     c1, c2, c3, c4 = st.columns(4)
     with c1: income = st.number_input("Income", 0, key="income", help="Monthly income in USD")
     with c2: loan_amount = st.number_input("Loan", 0, key="loan_amount", help="Principal Amount")
@@ -278,10 +280,10 @@ with left_col:
     with c7: credit_history = st.number_input("Hist.", 0, key="credit_history", help="Years of Credit History")
     with c8: st.empty() 
 
-    user_story = st.text_area("Reason for Loan", height=160, key="user_story", placeholder="Enter applicant explanation...")
+    user_story = st.text_area("Reason for Loan", height=190, key="user_story", placeholder="Enter applicant explanation...")
     
     if st.button("Predict Risk", type="primary", use_container_width=True):
-        with st.spinner("Analyzing..."):
+        with st.spinner("Analysing..."):
             try:
                 result = risk_engine.get_total_risk(age=age, income=income, loan_amount=loan_amount, loan_term=loan_term, dti=dti, credit_history=credit_history, dependents=dependents, user_story=user_story)
                 fin_commentary = generate_financial_insight({"income": income, "dti": dti, "credit_history": credit_history}, result['Math_Score'])
@@ -306,23 +308,26 @@ if st.session_state.active_index != -1:
     fin_commentary = record.get('financial_commentary', "Analysis not available.")
 
     with right_col:
+        st.write("")
         c_card, c_btns = st.columns([3.5, 0.8])
         with c_btns:
             pdf_bytes = create_pdf_report(record['inputs'], result, record['custom_name'], fin_commentary)
             img_bytes = create_summary_image(record['inputs'], result, record['custom_name'])
-            st.download_button("📄 PDF", pdf_bytes, f"{record['custom_name']}.pdf", "application/pdf", use_container_width=True)
-            st.download_button("🖼️ IMG", img_bytes, f"{record['custom_name']}.png", "image/png", use_container_width=True)
+            st.download_button(" PDF ", pdf_bytes, f"{record['custom_name']}.pdf", "application/pdf", use_container_width=True)
+            st.download_button(" IMG ", img_bytes, f"{record['custom_name']}.png", "image/png", use_container_width=True)
 
         with c_card:
             final_risk = result['Final_Risk']
             text_analysis = result.get('Text_Analysis', {})
             conf_val = text_analysis.get('confidence', '85')
-            if final_risk > 60: bg="#ffebee"; border="#ef5350"; text="#c62828"; action="REJECT"; arrow="↑"; level="High Risk"
-            elif final_risk > 40: bg="#fff3e0"; border="#ffb74d"; text="#ef6c00"; action="REVIEW"; arrow="↗"; level="Med Risk"
-            else: bg="#e8f5e9"; border="#66bb6a"; text="#2e7d32"; action="APPROVE"; arrow="↓"; level="Low Risk"
+            if final_risk > 60: bg="#ffebee"; border="#ef5350"; text="#c62828"; action="REJECT LOAN"; arrow="↑"; level="High Risk"
+            elif final_risk > 40: bg="#fff3e0"; border="#ffb74d"; text="#ef6c00"; action="REVIEW LOAN"; arrow="↗"; level="Med Risk"
+            else: bg="#e8f5e9"; border="#66bb6a"; text="#2e7d32"; action="APPROVE LOAN"; arrow="↓"; level="Low Risk"
             html_code = f"""<div style="background-color:{bg};border:2px solid {border};border-radius:10px;padding:10px 15px;height:120px;display:flex;align-items:center;"><div style="flex:1.5;border-right:1px solid {border};padding-right:10px;"><div style="font-size:11px;color:#555;">Total Risk Score</div><div style="font-size:36px;font-weight:900;color:{text};line-height:1;">{final_risk}/100</div><div style="display:inline-block;background-color:rgba(255,255,255,0.6);border:1px solid {text};color:{text};border-radius:12px;padding:2px 8px;font-size:10px;font-weight:bold;margin-top:4px;">{arrow} {action} : {level}</div></div><div style="flex:1;padding-left:15px;"><div style="font-size:11px;color:#555;">Confidence</div><div style="font-size:36px;font-weight:900;color:#333;line-height:1;">{conf_val}%</div><div style="font-size:9px;color:#777;margin-top:2px;">Math + Story Model</div></div></div>"""
             st.markdown(html_code, unsafe_allow_html=True)
 
+        st.write("")
+        
         tab1, tab2 = st.tabs(["Analysis", "Data"])
         with tab1:
             st.caption("AI Summary")
@@ -346,4 +351,4 @@ if st.session_state.active_index != -1:
             st.altair_chart(chart, use_container_width=True)
 else:
     with right_col:
-        st.info("👈 Enter details to start.")
+        st.info("👈 Enter applicant details to start.")
