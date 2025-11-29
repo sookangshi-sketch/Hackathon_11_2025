@@ -100,17 +100,20 @@ def create_summary_image(data, result, label):
         status_bg = "#e8f5e9"
 
     # --- 3. FONT LOADING ---
-    # Using basic fonts for reliability, can be replaced with custom paths
+    # We point directly to the files we uploaded to the folder
     try:
-        f_title = ImageFont.truetype("arialbd.ttf", 28)
-        f_header_big = ImageFont.truetype("arialbd.ttf", 18)
-        f_header_small = ImageFont.truetype("arial.ttf", 14)
-        f_text = ImageFont.truetype("arial.ttf", 13)
-        f_text_bold = ImageFont.truetype("arialbd.ttf", 13)
-        f_score_big = ImageFont.truetype("arialbd.ttf", 48)
-        f_score_small = ImageFont.truetype("arialbd.ttf", 16)
+        # Use the bundled fonts (guaranteed to work on Streamlit Cloud)
+        f_title = ImageFont.truetype("Roboto-Bold.ttf", 28)
+        f_header_big = ImageFont.truetype("Roboto-Bold.ttf", 18)
+        f_header_small = ImageFont.truetype("Roboto-Regular.ttf", 14)
+        f_text = ImageFont.truetype("Roboto-Regular.ttf", 13)
+        f_text_bold = ImageFont.truetype("Roboto-Bold.ttf", 13)
+        f_score_big = ImageFont.truetype("Roboto-Bold.ttf", 48)
+        f_score_small = ImageFont.truetype("Roboto-Bold.ttf", 16)
+
     except OSError:
-        # Fallback if Arial isn't present on the system
+        # Fallback only if the files are physically missing from the folder
+        print("Error: Font files not found. Using default.")
         f_title = ImageFont.load_default()
         f_header_big = ImageFont.load_default()
         f_header_small = ImageFont.load_default()
