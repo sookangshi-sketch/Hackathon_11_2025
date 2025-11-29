@@ -126,7 +126,7 @@ def create_summary_image(data, result, label):
     # --- 4. MAIN HEADER SECTION (Top Strip) ---
     d.rectangle([(0, 0), (W, 15)], fill=theme_color)
     d.text((30, 35), "DeepCheck Credit Risk Assessment", fill=text_main_color, font=f_title)
-    d.text((30, 70), f"Case ID: {label} | Date: {datetime.date.today()}", fill=text_header_color, font=f_header_small)
+    d.text((30, 70), f"Case ID: {label} | Date: {datetime.date.today().strftime('%d-%m-%Y')}", fill=text_header_color, font=f_header_small)
     
     # Confidence Badge
     conf = result.get('Text_Analysis',{}).get('confidence','N/A')
@@ -318,7 +318,7 @@ def create_pdf_report(data, result, label, fin_text):
     pdf.set_font("Arial", 'B', 20)
     pdf.cell(0, 10, "Credit Risk Assessment Report", ln=True, align='L')
     pdf.set_font("Arial", 'I', 10)
-    pdf.cell(0, 10, f"Generated via Cloudflare-Is-Not-Available AI | Date: {datetime.date.today()}", ln=True, align='L')
+    pdf.cell(0, 10, f"Generated via Cloudflare-Is-Not-Available AI | Date: {datetime.date.today().strftime('%d-%m-%Y')}", ln=True, align='L')
     pdf.ln(5)
 
     # 1. APPLICANT DATA
@@ -578,4 +578,5 @@ if st.session_state.active_index != -1:
 else:
     with right_col:
         st.markdown("### ")
+
         st.info("👈 Enter applicant details to start.")
