@@ -69,27 +69,222 @@ st.markdown("""
 # ---------------------------------------------------------
 # HELPER 1: IMAGE GENERATOR
 # ---------------------------------------------------------
-def create_summary_image(data, result, label):
-    W, H = 800, 600
-    img = Image.new('RGB', (W, H), color='white'); d = ImageDraw.Draw(img)
-    score = result['Final_Risk']
-    if score > 60: header="#ffcdd2"; text="#b71c1c"; status="REJECT"
-    elif score > 40: header="#ffe0b2"; text="#e65100"; status="REVIEW"
-    else: header="#c8e6c9"; text="#1b5e20"; status="APPROVE"
-    try: fXL=ImageFont.truetype("arial.ttf",50); fL=ImageFont.truetype("arial.ttf",30); fM=ImageFont.truetype("arial.ttf",20)
-    except: fXL=ImageFont.load_default(); fL=ImageFont.load_default(); fM=ImageFont.load_default()
-    d.rectangle([(0,0),(W,100)], fill=header); d.text((30,25), f"Decision: {status}", fill=text, font=fXL)
-    d.text((30,130), f"Risk: {score}/100", fill="black", font=fL); d.text((400,130), f"Conf: {result.get('Text_Analysis',{}).get('confidence','N/A')}%", fill="gray", font=fL)
-    d.line([(30,180),(W-30,180)], fill="gray", width=2)
-    d.text((30,200),"Applicant:",fill="black",font=fL); d.text((30,240),f"Income: ${data['income']} | Loan: ${data['loan_amount']}",fill="black",font=fM)
-    d.text((30,290),"AI Summary:",fill="black",font=fL)
-    exp=result.get('Text_Analysis',{}).get('explanation','-'); wrap=textwrap.fill(exp,70)
-    d.text((30,330),wrap,fill="black",font=fM)
-    
-    # Footer
-    d.text((30,550),f"Cloudflare-Is-Not-Available AI | Case: {label}",fill="lightgray",font=fM)
-    buf=io.BytesIO(); img.save(buf,format='PNG'); return buf.getvalue()
+from PIL import Image, ImageDraw, ImageFont
+import io
+import textwrap
 
+def create_summary_image(data, result, label):
+    # --- 1. CONFIGURATION & SETUP ---
+    W, H = 800, 650 # Slightly taller to accommodate data comfortably
+    bg_color = "#f4f6f9"
+    card_color = "#ffffff"
+    text_header_color = "#95a5a6" # Light gray headers
+    text_main_color = "#2c3e50"   # Dark blue/gray main text
+    
+    img = Image.new('RGB', (W, H), color=bg_color)
+    d = ImageDraw.Draw(img)
+
+    # --- 2. DYNAMIC THEME BASED ON RISK ---
+    score = result.get('Final_Risk', 0)
+    if score > 60:
+        theme_color = "#d32f2f" # Red
+        status = "REJECT"
+        status_bg = "#ffebee"
+    elif score > 40:
+        theme_color = "#f57c00" # Orange
+        status = "MANUAL REVIEW"
+        status_bg = "#fff3e0"
+    else:
+        theme_color = "#388e3c" # Green
+        status = "APPROVE"
+        status_bg = "#e8f5e9"
+
+    # --- 3. FONT LOADING ---
+    # Using basic fonts for reliability, can be replaced with custom paths
+    try:
+        f_title = ImageFont.truetype("arialbd.ttf", 28)
+        f_header_big = ImageFont.truetype("arialbd.ttf", 18)
+        f_header_small = ImageFont.truetype("arial.ttf", 14)
+        f_text = ImageFont.truetype("arial.ttf", 13)
+        f_text_bold = ImageFont.truetype("arialbd.ttf", 13)
+        f_score_big = ImageFont.truetype("arialbd.ttf", 48)
+        f_score_small = ImageFont.truetype("arialbd.ttf", 16)
+    except OSError:
+        # Fallback if Arial isn't present on the system
+        f_title = ImageFont.load_default()
+        f_header_big = ImageFont.load_default()
+        f_header_small = ImageFont.load_default()
+        f_text = ImageFont.load_default()
+        f_text_bold = ImageFont.load_default()
+        f_score_big = ImageFont.load_default()
+        f_score_small = ImageFont.load_default()
+
+
+    # --- 4. MAIN HEADER SECTION (Top Strip) ---
+    d.rectangle([(0, 0), (W, 15)], fill=theme_color)
+    d.text((30, 35), "DeepCheck Credit Risk Assessment", fill=text_main_color, font=f_title)
+    d.text((30, 70), f"Case ID: {label} | Date: {datetime.date.today()}", fill=text_header_color, font=f_header_small)
+    
+    # Confidence Badge
+    conf = result.get('Text_Analysis',{}).get('confidence','N/A')
+    conf_text = f"AI Confidence: {conf}%"
+    d.rounded_rectangle([(W-200, 35), (W-30, 70)], radius=10, fill="#eceff1")
+    conf_w = d.textlength(conf_text, font=f_text_bold)
+    d.text((W - 115 - conf_w/2, 45), conf_text, fill="#546e7a", font=f_text_bold)
+
+
+    # ================= GRID LAYOUT SETUP =================
+    # Defining the grid coordinates for cleaner code
+    col1_x, col2_x = 30, 410
+    row1_y, row2_y = 100, 360
+    card_w = 360
+    row1_h, row2_h = 230, 240
+    # =====================================================
+
+
+    # --- 5. TOP LEFT CARD: DECISION & MAIN SCORE ---
+    c1_rect = [(col1_x, row1_y), (col1_x + card_w, row1_y + row1_h)]
+    d.rounded_rectangle(c1_rect, radius=12, fill=card_color)
+    
+    card_x, card_y = col1_x + 20, row1_y + 20
+    d.text((card_x, card_y), "RECOMMENDATION", fill=text_header_color, font=f_header_small)
+    
+    # Status Pill
+    final_score = result['Final_Risk']
+    if final_score > 60: 
+        decision = "REJECT (High Risk)"
+        r, g, b = 200, 0, 0 # RED
+    elif final_score > 40: 
+        decision = "MANUAL REVIEW (Medium Risk)"
+        r, g, b = 220, 120, 0 # ORANGE
+    else: 
+        decision = "APPROVE (Low Risk)"
+        r, g, b = 0, 150, 0 # GREEN
+        
+    status_w = d.textlength(decision, font=f_header_big)
+    pill_rect = [(card_x, card_y + 30), (card_x + status_w + 40, card_y + 70)]
+    d.rounded_rectangle(pill_rect, radius=8, fill=status_bg)
+    d.text((card_x + 20, card_y + 40), decision, fill=theme_color, font=f_header_big)
+
+    
+    
+    
+
+
+    # Main Score
+    d.text((card_x, card_y + 100), "OVERALL RISK SCORE", fill=text_header_color, font=f_header_small)
+    d.text((card_x, card_y + 125), f"{score}/100", fill=text_main_color, font=f_score_big)
+
+    # Main Progress Bar
+    bar_x, bar_y = card_x + 200, card_y + 155
+    bar_w, bar_h = 110, 10
+    d.rectangle([(bar_x, bar_y), (bar_x + bar_w, bar_y + bar_h)], fill="#eceff1", outline=None)
+    fill_w = int(bar_w * (score / 100))
+    d.rectangle([(bar_x, bar_y), (bar_x + fill_w, bar_y + bar_h)], fill=theme_color, outline=None)
+
+
+    # --- 6. TOP RIGHT CARD: APPLICANT SNAPSHOT ---
+    c2_rect = [(col2_x, row1_y), (col2_x + card_w, row1_y + row1_h)]
+    d.rounded_rectangle(c2_rect, radius=12, fill=card_color)
+    
+    card_x, card_y = col2_x + 20, row1_y + 20
+    d.text((card_x, card_y), "APPLICANT SNAPSHOT", fill=text_header_color, font=f_header_small)
+    
+    # Snapshot Data Rows (Tightened spacing)
+    line_height = 35
+    curr_y = card_y + 50
+    
+    snapshot_data = [
+        ("Monthly Income ", f"${data.get('income', 0):,}"),
+        ("Loan Requested ", f"${data.get('loan_amount', 0):,}"),
+        ("DTI Ratio ", f"{data.get('dti', 0):.2f}"),
+        # Added one more optional field if available, e.g., Credit History
+        ("Credit History ", f"{data.get('credit_history', 'N/A')} Yrs") 
+    ]
+
+    for label_txt, val_txt in snapshot_data:
+        d.text((card_x, curr_y), label_txt, fill="#546e7a", font=f_text)
+        val_w = d.textlength(val_txt, font=f_header_big)
+        d.text((col2_x + card_w - 30 - val_w, curr_y-3), val_txt, fill=text_main_color, font=f_header_big)
+        curr_y += line_height
+
+
+    # --- 7. BOTTOM LEFT CARD: AI NARRATIVE (Narrower column) ---
+    c3_rect = [(col1_x, row2_y), (col1_x + card_w, row2_y + row2_h)]
+    d.rounded_rectangle(c3_rect, radius=12, fill=card_color)
+    
+    card_x, card_y = col1_x + 20, row2_y + 20
+    d.text((card_x, card_y), "AI NARRATIVE SUMMARY", fill=text_header_color, font=f_header_small)
+
+    exp = result.get('Text_Analysis',{}).get('explanation','No analysis provided.')
+    # Wrap width depends on font size, approx 40 chars for this width
+    lines = textwrap.wrap(exp, width=50) 
+    
+    text_y = card_y + 53
+    # Display more lines since the box is taller now relative to width
+    for line in lines[:10]: 
+        d.text((card_x, text_y), line, fill=text_main_color, font=f_text)
+        text_y += 20
+
+
+    # --- 8. BOTTOM RIGHT CARD: DETAILED RISK INDICATORS (New!) ---
+    c4_rect = [(col2_x, row2_y), (col2_x + card_w, row2_y + row2_h)]
+    d.rounded_rectangle(c4_rect, radius=12, fill=card_color)
+    
+    card_x, card_y = col2_x + 20, row2_y + 20
+    d.text((card_x, card_y), "DETAILED RISK INDICATORS", fill=text_header_color, font=f_header_small)
+
+    # Extracting sub-scores from the result structure (matching PDF logic)
+    analysis = result.get('Text_Analysis', {})
+    sub_scores = [
+        ("Purpose Legitimacy", analysis.get('purpose_legitimacy', 0)),
+        ("Financial Responsibility", analysis.get('financial_responsibility', 0)),
+        ("Urgency/Desperation", analysis.get('urgency_desperation', 0)),
+        ("Clarity of Plan", analysis.get('clarity', 0))
+    ]
+
+    curr_y = card_y + 50
+    line_height = 35 # More space for bars
+
+    for label_txt, val_score in sub_scores:
+        # Label
+        d.text((card_x, curr_y), label_txt, fill="#546e7a", font=f_text)
+        
+        # Score Number
+        val_txt = f"{val_score}/100"
+        val_w = d.textlength(val_txt, font=f_score_small)
+        d.text((col2_x + card_w - 120 - val_w, curr_y), val_txt, fill=text_main_color, font=f_score_small)
+
+        # Mini Progress Bar
+        mini_bar_x = col2_x + card_w - 110
+        mini_bar_y = curr_y + 5
+        mini_bar_w, mini_bar_h = 80, 8
+        
+        d.rectangle([(mini_bar_x, mini_bar_y), (mini_bar_x + mini_bar_w, mini_bar_y + mini_bar_h)], fill="#eceff1")
+        # Ensure val_score is an int for calculation
+        try: score_int = int(val_score)
+        except: score_int = 0
+        
+        mini_fill_w = int(mini_bar_w * (score_int / 100))
+        # Use theme color for bar, or gray if 0/unknown
+        bar_color = theme_color if score_int > 0 else "#cfd8dc"
+        d.rectangle([(mini_bar_x, mini_bar_y), (mini_bar_x + mini_fill_w, mini_bar_y + mini_bar_h)], fill=bar_color)
+        
+        curr_y += line_height
+
+
+    # --- 9. FOOTER ---
+    footer_y = H - 30
+    d.line([(30, footer_y), (W-30, footer_y)], fill="#e0e0e0", width=1)
+    footer_note = "DeepCheck Credit Risk Report | Generated via Cloudflare-Is-Not-Available AI"
+    d.text((30, footer_y + 10), footer_note, fill="#b0bec5", font=f_text)
+
+
+    # --- 10. SAVE ---
+    buf = io.BytesIO()
+    img.save(buf, format='PNG')
+    return buf.getvalue()
+    
 # ---------------------------------------------------------
 # HELPER 2: PDF GENERATOR 
 # ---------------------------------------------------------
@@ -139,7 +334,7 @@ def create_pdf_report(data, result, label, fin_text):
     for key, value in data.items():
         label_text = labels.get(key, key.title())
         
-        # --- FIX APPLIED HERE: Clean the value before printing ---
+        # --- Clean the value before printing ---
         safe_value = clean_text(value) 
         
         pdf.cell(60, 7, f"{label_text}", border=0)
